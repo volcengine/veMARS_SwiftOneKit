@@ -14,7 +14,7 @@ public class OKSwiftFunction {
     lazy var organizedSymbols = [String : [UnsafeMutableRawPointer?]]()
     var namespace : String
     
-    static let functionQueue = DispatchQueue(label: "onekit.function.queue")
+    //static let functionQueue = DispatchQueue(label: "onekit.function.queue")
     
     public convenience init(namespace: String) {
         self.init(privately: namespace)
@@ -40,9 +40,9 @@ public class OKSwiftFunction {
             }
             let exportedSymbols = OKSwiftFunction.default.getExportedSymbols(image: image, slide: slide)
             exportedSymbols.forEach { (key, symbol) in
-                OKSwiftFunction.functionQueue.sync {
+                //OKSwiftFunction.functionQueue.sync {
                     OKSwiftFunction.default.addSymbol(key: key, symbol: symbol)
-                }
+                //}
             }
         }
     }
@@ -51,9 +51,9 @@ public class OKSwiftFunction {
         for i in 0..<_dyld_image_count() {
             let exportedSymbols = getExportedSymbols(image: _dyld_get_image_header(i), slide: _dyld_get_image_vmaddr_slide(i))
             exportedSymbols.forEach { (key, symbol) in
-                OKSwiftFunction.functionQueue.sync {
+                //OKSwiftFunction.functionQueue.sync {
                     addSymbol(key: key, symbol: symbol)
-                }
+                //}
             }
         }
     }
@@ -99,8 +99,10 @@ public class OKSwiftFunction {
     public func start(key: String) {
         typealias classFunc = @convention(thin) () -> Void
         var keySymbols : [UnsafeMutableRawPointer?] = []
-        OKSwiftFunction.functionQueue.sync {
-            guard let organizedKeySymbols = organizedSymbols[key] else {
+        //OKSwiftFunction.functionQueue.sync {
+            if let organizedKeySymbols = organizedSymbols[key] {
+                keySymbols = organizedKeySymbols
+            } else {
                 exportedSymbols.forEach { (fullKey, symbol) in
                     if fullKey.hasPrefix(fullNamespace + key + ".") || fullKey == fullNamespace + key {
                         keySymbols.append(symbol)
@@ -108,10 +110,8 @@ public class OKSwiftFunction {
                     }
                 }
                 organizedSymbols[key] = keySymbols
-                return
             }
-            keySymbols = organizedKeySymbols
-        }
+        //}
         keySymbols.forEach { (symbol) in
             let f = unsafeBitCast(symbol, to: classFunc.self)
             f()
